@@ -5,32 +5,42 @@ import (
 )
 
 func GetUsers(params structs.ParamsGetListUser) ([]structs.DataGetUser, int, error) {
-
 	var (
-		data []structs.DataGetUser
-		//t      structs.Component
-		Count int
+		data  []structs.DataGetUser
+		count int
 	)
 
-	err := idb.DB.Table("users")
-	err = err.Where("deleted_at is null")
+	// Start the query
+	query := idb.DB.Table("users").Where("deleted_at IS NULL")
 
+	// Apply filters
 	if params.Name != "" {
-		err = err.Where("users.name like ?", "%"+params.Name+"%")
+		query = query.Where("users.name LIKE ?", "%"+params.Name+"%")
 	}
-	err = err.Count(&Count)
+
+	// Count the total number of records
+	err := query.Count(&count).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Apply pagination
 	if params.Limit != nil {
-		err = err.Limit(*params.Limit)
+		query = query.Limit(*params.Limit)
 	}
 	if params.Offset != nil {
-		err = err.Offset(*params.Limit)
+		query = query.Offset(*params.Offset)
 	}
 
-	err = err.Find(&data)
-	errx := err.Error
+	// Fetch the data
+	err = query.Find(&data).Error
+	if err != nil {
+		return nil, 0, err
+	}
 
-	return data, Count, errx
+	return data, count, nil
 }
+
 
 func CreateUsers(params structs.ParamsCreateUser) (structs.ParamsCreateUser, error) {
 	var t = structs.Component{}
